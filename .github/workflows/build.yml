@@ -1,0 +1,61 @@
+name: Build
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+env:
+  COMMON_FLAGS: >
+    -DLLVM_BUILD_TOOLS=OFF
+    -DLLVM_INCLUDE_TOOLS=OFF
+    -DLLVM_BUILD_RUNTIMES=OFF
+    -DLLVM_INCLUDE_RUNTIMES=OFF
+    -DLLVM_BUILD_RUNTIME=OFF
+    -DLLVM_BUILD_EXAMPLES=OFF
+    -DLLVM_INCLUDE_EXAMPLES=OFF
+    -DLLVM_BUILD_TESTS=OFF
+    -DLLVM_INCLUDE_TESTS=OFF
+    -DLLVM_INCLUDE_GO_TESTS=OFF
+    -DLLVM_BUILD_BENCHMARKS=OFF
+    -DLLVM_INCLUDE_BENCHMARKS=OFF
+    -DLLVM_BUILD_UTILS=OFF
+    -DLLVM_INCLUDE_UTILS=OFF
+    -DLLVM_ENABLE_PLUGINS=OFF
+    -DLLVM_ENABLE_ZLIB=OFF
+    -DLLVM_HAVE_LINK_VERSION_SCRIPT=OFF
+jobs:
+  build-linux:
+    name: 'Build (Linux: x86-64/${{matrix.compiler}}-${{matrix.version}}/${{matrix.build-type}})'
+    runs-on: ubuntu-latest
+    container: ghcr.io/wnproject/build-linux:${{matrix.compiler}}-${{matrix.version}}
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [clang, gcc]
+        version: [9, 10]
+        build-type: [Debug, Release]
+    steps:
+      - name: Set up build environment
+        run: mkdir build
+      - name: Checkout code
+        uses: actions/checkout@v2.3.3
+        with:
+          path: ./source
+          submodules: true
+      - name: Run configuration
+        working-directory: ./build
+        run: >
+          cmake -GNinja
+          -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
+          -DLLVM_HOST_TRIPLE=${LLVM_TRIPLE}
+          -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TRIPLE}
+          -DLLVM_TARGETS_TO_BUILD=X86
+          ${COMMON_FLAGS}
+          ../source/externals/llvm-project/llvm
+        env:
+          LLVM_TRIPLE: x86_64-unknown-linux-gnu
+      - name: Run build
+        working-directory: ./build
+        run: cmake --build .
+      - name: Report build details
+        run: du -hbcs ./source ./build
