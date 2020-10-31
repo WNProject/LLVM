@@ -1,0 +1,6 @@
+[submodule "llvm-project"]
+	path = externals/llvm-project
+	url = https://github.com/llvm/llvm-project.git
+	branch = release/11.x
+	ignore = dirty
+	shallow = true
